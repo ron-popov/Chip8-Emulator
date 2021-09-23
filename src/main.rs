@@ -4,19 +4,36 @@ mod types;
 mod consts;
 
 use cpu::CPU;
+use memory::Memory;
 use types::Double;
 use types::Byte;
 
+use std::io::Read;
 use std::fs::File;
 
 #[macro_use] extern crate log;
 use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, WriteLogger, LevelFilter, TerminalMode, Color, ColorChoice};
 
+extern crate clap;
+use clap::{Arg, App};
+
 fn draw() {
     trace!("Drawing the screen");
 }
 
-fn main() { 
+fn main() {
+    // Parse command line arguments
+    let command_line_args = App::new("Chip8 Emulator")
+                            .author("Ron Popov AKA DirtyAxe")
+                            .arg(Arg::with_name("Rom File")
+                                .short("f")
+                                .long("rom-file")
+                                .value_name("FILE_PATH")
+                                .help("Path of a rom file to run")
+                                .takes_value(true)
+                                .required(true))
+                            .get_matches();
+
     // Initialize logger
     let mut config_builder = ConfigBuilder::new();
     config_builder.set_level_color(Level::Info, Some(Color::Green));
@@ -33,8 +50,26 @@ fn main() {
         return;
     }
 
-    // Initialize memory and cpu
+    // Logger inialized and arguments parsed, PARTY
     info!("Starting Chip8");
-    
-    let cpu = CPU::new(draw);
+
+    // Get rom file path from command line args
+    let rom_file_path: String = command_line_args.value_of("Rom File").unwrap_or_else(|| {
+        debug!("Command line args are {:?}", command_line_args);
+        panic!("Failed unwrapping rom file path");
+    }).to_string();
+
+    info!("Rom file path is \"{}\"", rom_file_path);
+
+    // Initialize memory
+    let rom_file: File = File::open(rom_file_path).expect("Failed opening rom file");
+
+    let rom_content = rom_file.bytes().map(|value| {
+        Byte::new(value.expect("Failed reading rom file"))
+    }).collect();
+
+    let memory: Memory = Memory::new_from_rom(rom_content);
+
+    // Initialize cpu
+    let cpu = CPU::new(memory, draw);
 }

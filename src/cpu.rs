@@ -10,7 +10,7 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new(draw_screen_handler: fn()) -> CPU {
-        CPU{memory_space: Memory::new(), program_counter: Double::new(consts::PROGRAM_MEMORY_ADDR as u16), draw_screen_handler: draw_screen_handler}
+    pub fn new(memory: Memory, draw_screen_handler: fn()) -> CPU {
+        CPU{memory_space: memory, program_counter: Double::new(consts::PROGRAM_MEMORY_ADDR as u16), draw_screen_handler: draw_screen_handler}
     }
 }
