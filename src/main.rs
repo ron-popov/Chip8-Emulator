@@ -3,13 +3,18 @@ mod memory;
 mod types;
 mod consts;
 
-pub use cpu::CPU;
-pub use memory::{Memory, init_empty_memory};
-pub use types::Double;
-pub use types::Byte;
+use cpu::CPU;
+use types::Double;
+use types::Byte;
+
+use std::fs::File;
 
 #[macro_use] extern crate log;
-use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, LevelFilter, TerminalMode, Color, ColorChoice};
+use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, WriteLogger, LevelFilter, TerminalMode, Color, ColorChoice};
+
+fn draw() {
+    trace!("Drawing the screen");
+}
 
 fn main() { 
     // Initialize logger
@@ -19,13 +24,17 @@ fn main() {
     config_builder.set_target_level(LevelFilter::Error);
 
     let config = config_builder.build();
-    let logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![TermLogger::new(LevelFilter::Info, config.clone(), TerminalMode::Mixed, ColorChoice::Auto)];
-    // logging_vector.push(WriteLogger::new(LevelFilter::Trace, config.clone(), File::create("nessy.log").unwrap()));
+    let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![TermLogger::new(LevelFilter::Info, config.clone(), TerminalMode::Mixed, ColorChoice::Auto)];
+    logging_vector.push(WriteLogger::new(LevelFilter::Trace, config.clone(), File::create("Chip8.log").unwrap()));
+    let logger_init_result = CombinedLogger::init(logging_vector);
 
-    let _ = CombinedLogger::init(logging_vector);
+    if logger_init_result.is_err() {
+        println!("Failed initializing logger : {}", logger_init_result.unwrap_err());
+        return;
+    }
 
     // Initialize memory and cpu
     info!("Starting Chip8");
     
-    let cpu = CPU{memory_space: init_empty_memory()};
+    let cpu = CPU::new(draw);
 }
