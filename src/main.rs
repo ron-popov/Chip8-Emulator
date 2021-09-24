@@ -41,7 +41,7 @@ fn main() {
     config_builder.set_target_level(LevelFilter::Error);
 
     let config = config_builder.build();
-    let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![TermLogger::new(LevelFilter::Info, config.clone(), TerminalMode::Mixed, ColorChoice::Auto)];
+    let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![TermLogger::new(LevelFilter::Trace, config.clone(), TerminalMode::Mixed, ColorChoice::Auto)];
     logging_vector.push(WriteLogger::new(LevelFilter::Trace, config.clone(), File::create("Chip8.log").unwrap()));
     let logger_init_result = CombinedLogger::init(logging_vector);
 

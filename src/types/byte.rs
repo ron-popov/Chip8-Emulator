@@ -29,7 +29,8 @@ impl Into<u16> for Byte {
 
 impl Into<Double> for Byte {
     fn into(self: Self) -> Double {
-        return Double::new(self.get_raw_value() as u16);
+        // Value of byte probably won't be to big to be in a double ...
+        return Double::new_u16(self.get_raw_value() as u16);
     }
 }
 
