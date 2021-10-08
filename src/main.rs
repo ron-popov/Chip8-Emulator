@@ -2,11 +2,13 @@ mod cpu;
 mod memory;
 mod types;
 mod consts;
+mod errors;
 
 use cpu::CPU;
 use memory::Memory;
 use types::Double;
 use types::Byte;
+use errors::Chip8Error;
 
 use std::io::Read;
 use std::fs::File;
@@ -17,7 +19,7 @@ use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, WriteLogger, L
 extern crate clap;
 use clap::{Arg, App};
 
-fn draw() {
+fn draw(memory: &Memory) {
     trace!("Drawing the screen");
 }
 
@@ -71,5 +73,13 @@ fn main() {
     let memory: Memory = Memory::new_from_rom(rom_content);
 
     // Initialize cpu
-    let cpu = CPU::new(memory, draw);
+    let mut cpu = CPU::new(memory, draw);
+
+    let mut cpu_result: Result<(), Chip8Error> = Ok(());
+    while cpu_result.is_ok() {
+        cpu_result = cpu.execute_instruction();
+    }
+
+
+    error!("Left main cpu, Got error : {:?}", cpu_result.unwrap_err());
 }

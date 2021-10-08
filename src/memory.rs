@@ -30,11 +30,11 @@ impl Memory {
         return mem;
     }
 
-    pub fn get_value(self: Self, index: Double) -> Byte {
+    pub fn get_value(&self, index: Double) -> Byte {
         self.memory_space[index.get_raw_value() as usize]
     }
 
-    pub fn set_value(self: &mut Self, index: Double, value: Byte) {
+    pub fn set_value(&mut self, index: Double, value: Byte) {
         self.memory_space[index.get_raw_value() as usize] = value
     }
 }
