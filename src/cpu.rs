@@ -2,24 +2,30 @@ use crate::memory::Memory;
 use crate::errors::Chip8Error;
 use crate::consts;
 use crate::stack::Stack;
+use crate::display::Display;
 
 pub struct CPU {
     memory_space: Memory,
     program_counter: u16,
-    draw_screen_handler: fn(Vec<u8>, u8, u8),
+    display: Display,
     stack: Stack,
     registers: [u8; 16],
     index_register: u16
 }
 
 impl CPU {
-    pub fn new(memory: Memory, draw_screen_handler: fn(Vec<u8>, u8, u8)) -> CPU {
-        CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, draw_screen_handler: draw_screen_handler, stack: Stack::new(), registers: [0x00; 16], index_register: 0x00}
+    pub fn new(memory: Memory, display: Display) -> CPU {
+        CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, display: display, stack: Stack::new(), registers: [0x00; 16], index_register: 0x00}
     }
 
     pub fn execute_instruction(&mut self) -> Result<(),Chip8Error> {
         let instruction_double: u16 = ((self.memory_space.get_value(self.program_counter) as u16) << 8) + self.memory_space.get_value(self.program_counter + 1) as u16;
         trace!("Current Instruction : {:#06x}", instruction_double);
+        
+        if instruction_double == 0x1228 {
+            return Err(Chip8Error::UnknownError);
+        }
+        
 
         // Execute simple instructions
         match instruction_double {
@@ -82,8 +88,8 @@ impl CPU {
                         let y_coord = self.registers[instruction_nibbles[2] as usize];
 
                         // self.draw_screen_handler(sprite_content, x_coord, y_coord);
-                        (self.draw_screen_handler)(sprite_content, x_coord, y_coord);
-
+                        // (self.draw_screen_handler)(sprite_content, x_coord, y_coord);
+                        self.display.draw_sprite(sprite_content, x_coord, y_coord);
                     }
                     _ => {
                         error!("Invalid instruction : {:#06x}", instruction_double);
@@ -95,6 +101,7 @@ impl CPU {
 
         self.program_counter += 2;
 
+        // return Err(Chip8Error::InvalidInstruction);
         return Ok(())
     }
 }

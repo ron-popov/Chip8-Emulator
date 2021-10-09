@@ -3,10 +3,12 @@ mod memory;
 mod consts;
 mod errors;
 mod stack;
+mod display;
 
 use cpu::CPU;
 use memory::Memory;
 use errors::Chip8Error;
+use display::Display;
 
 use std::io::Read;
 use std::fs::File;
@@ -16,10 +18,6 @@ use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, WriteLogger, L
 
 extern crate clap;
 use clap::{Arg, App};
-
-fn draw(sprite: Vec<u8>, x_coord: u8, y_coord: u8) {
-    trace!("Drawing the screen");
-}
 
 fn main() {
     // Parse command line arguments
@@ -70,14 +68,21 @@ fn main() {
 
     let memory: Memory = Memory::new_from_rom(rom_content);
 
-    // Initialize cpu
-    let mut cpu = CPU::new(memory, draw);
+    // Initialize display
+    let display = Display::new();
+    if display.is_err() {
+        error!("Failed initializing display");
+        return;
+    }
 
+    // Initialize cpu
+    let mut cpu = CPU::new(memory, display.unwrap());
+
+    // Main CPU Loop
     let mut cpu_result: Result<(), Chip8Error> = Ok(());
     while cpu_result.is_ok() {
         cpu_result = cpu.execute_instruction();
     }
-
 
     error!("Left main cpu, Got error : {:?}", cpu_result.unwrap_err());
 }
