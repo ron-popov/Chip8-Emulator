@@ -1,13 +1,11 @@
 mod cpu;
 mod memory;
-mod types;
 mod consts;
 mod errors;
+mod stack;
 
 use cpu::CPU;
 use memory::Memory;
-use types::Double;
-use types::Byte;
 use errors::Chip8Error;
 
 use std::io::Read;
@@ -19,7 +17,7 @@ use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, WriteLogger, L
 extern crate clap;
 use clap::{Arg, App};
 
-fn draw(memory: &Memory) {
+fn draw(sprite: Vec<u8>, x_coord: u8, y_coord: u8) {
     trace!("Drawing the screen");
 }
 
@@ -67,7 +65,7 @@ fn main() {
     let rom_file: File = File::open(rom_file_path).expect("Failed opening rom file");
 
     let rom_content = rom_file.bytes().map(|value| {
-        Byte::new(value.expect("Failed reading rom file"))
+        value.expect("Failed reading rom file")
     }).collect();
 
     let memory: Memory = Memory::new_from_rom(rom_content);
