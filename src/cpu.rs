@@ -89,7 +89,13 @@ impl CPU {
 
                         // self.draw_screen_handler(sprite_content, x_coord, y_coord);
                         // (self.draw_screen_handler)(sprite_content, x_coord, y_coord);
-                        self.display.draw_sprite(sprite_content, x_coord, y_coord);
+                        let draw_return = self.display.draw_sprite(sprite_content, x_coord, y_coord);
+                        if draw_return.is_err() {
+                            let error_msg = draw_return.unwrap_err();
+                            error!("Display error : {}", error_msg);
+                            return Err(Chip8Error::DisplayError(error_msg));
+                        }
+
                     }
                     _ => {
                         error!("Invalid instruction : {:#06x}", instruction_double);

@@ -2,5 +2,6 @@
 pub enum Chip8Error {
     InvalidInstruction,
     TriedPoppingEmptyStack,
-    UnknownError
+    UnknownError,
+    DisplayError(String)
 }
