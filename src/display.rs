@@ -32,29 +32,32 @@ impl Display {
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
         debug!("Displaying sprite");
-        debug!("Sprite content : {:?}", sprite_content);
+        trace!("Sprite content : {:?}", sprite_content);
 
-        
+        let mut y = (y_coord as i32) % consts::DISPLAY_HEIGHT as i32;
         for sprite in sprite_content {
             let mut value = sprite;
-            let mut y = (y_coord as i32) % consts::DISPLAY_HEIGHT as i32;
             
             
             for i in 0..8 {
                 let x = (x_coord as i32 + (7 - i)) % consts::DISPLAY_WIDTH as i32;
 
                 if (value & 0b1) == 1 {
-                    self.canvas.set_draw_color(Color::BLACK);
-                } else {
+                    // self.canvas.set_draw_color(Color::BLACK);
                     self.canvas.set_draw_color(Color::WHITE);
+                    trace!("Drawing black pixel at ({}, {})", x, y);
+                } else {
+                    // self.canvas.set_draw_color(Color::WHITE);
+                    self.canvas.set_draw_color(Color::BLACK);
+                    trace!("Drawing white pixel at ({}, {})", x, y);
                 }
 
                 value = value >> 1;
 
                 self.canvas.fill_rect(Rect::new(x, y, 1, 1))?;
                 
-                y += 1;
             }
+            y += 1;
         }
 
         self.canvas.present();

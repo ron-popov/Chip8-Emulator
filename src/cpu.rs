@@ -20,11 +20,11 @@ impl CPU {
 
     pub fn execute_instruction(&mut self) -> Result<(),Chip8Error> {
         let instruction_double: u16 = ((self.memory_space.get_value(self.program_counter) as u16) << 8) + self.memory_space.get_value(self.program_counter + 1) as u16;
-        trace!("Current Instruction : {:#06x}", instruction_double);
+        debug!("Current Instruction : {:#06x}", instruction_double);
         
-        if instruction_double == 0x1228 {
-            return Err(Chip8Error::UnknownError);
-        }
+        // if instruction_double == 0x1228 {
+        //     return Err(Chip8Error::UnknownError);
+        // }
         
 
         // Execute simple instructions
@@ -41,7 +41,7 @@ impl CPU {
                     ((instruction_double >> 12) & 0b00001111).try_into().unwrap(),
                     ((instruction_double >> 8) & 0b00001111).try_into().unwrap(),
                     ((instruction_double >> 4) & 0b00001111).try_into().unwrap(),
-                    (instruction_double & 0b0000111).try_into().unwrap()
+                    (instruction_double & 0b0001111).try_into().unwrap()
                 ];
 
                 // trace!("Instruction nibbles : {:?}", instruction_nibbles);
@@ -63,6 +63,7 @@ impl CPU {
                         let register_index = instruction_nibbles[1];
                         let new_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
 
+                        trace!("Setting register #{} to {:#04x}", register_index, new_value);
                         self.registers[register_index as usize] = new_value;
                     },
                     7 => { // ADD - Add to register
