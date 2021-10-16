@@ -22,8 +22,4 @@ impl Stack {
             return Ok(value.unwrap());
         }
     }
-
-    pub fn get_sp(&self) -> u8 {
-        return self.stack_vec.len() as u8;
-    }
 }
