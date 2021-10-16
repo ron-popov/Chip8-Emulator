@@ -3,18 +3,17 @@ mod memory;
 mod consts;
 mod errors;
 mod stack;
-mod display;
 
 use cpu::CPU;
 use memory::Memory;
-use errors::Chip8Error;
-use display::Display;
 
 use std::io::Read;
 use std::fs::File;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 
 #[macro_use] extern crate log;
 use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, WriteLogger, LevelFilter, TerminalMode, Color, ColorChoice};
@@ -22,7 +21,7 @@ use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, WriteLogger, L
 extern crate clap;
 use clap::{Arg, App};
 
-fn main() {
+fn emulate() -> Result<(), String> {
     // Parse command line arguments
     let command_line_args = App::new("Chip8 Emulator")
                             .author("Ron Popov AKA DirtyAxe")
@@ -48,7 +47,7 @@ fn main() {
 
     if logger_init_result.is_err() {
         println!("Failed initializing logger : {}", logger_init_result.unwrap_err());
-        return;
+        return Ok(());
     }
 
     // Logger inialized and arguments parsed, PARTY
@@ -71,17 +70,22 @@ fn main() {
 
     let memory: Memory = Memory::new_from_rom(rom_content);
 
-    // Initialize display
-    let display_result = Display::new();
-    if display_result.is_err() {
-        error!("Failed initializing display");
-        return;
-    }
+    // Initialize sdl
+    let sdl_context = sdl2::init()?;
+    let video_subsystem = sdl_context.video()?;
+    let window = video_subsystem.window("Chip8 Emulator", consts::DISPLAY_WIDTH as u32, consts::DISPLAY_HEIGHT as u32).build().unwrap();
 
-    let (mut display, mut event_pump) = display_result.unwrap();
+    let mut canvas : Canvas<Window> = window.into_canvas()
+        .present_vsync() // This means the screen cannot
+                         // render faster than your display rate (usually 60Hz or 144Hz)
+        .build().unwrap();
+
+    canvas.clear();
+
+    let mut event_pump = sdl_context.event_pump()?;
 
     // Initialize cpu
-    let mut cpu = CPU::new(memory, &mut display);
+    let mut cpu = CPU::new(memory, canvas);
 
     // Main loop
     'main_loop: loop {
@@ -107,5 +111,14 @@ fn main() {
             },
             None => {}
         }
+    }
+
+    return Ok(());
+}
+
+fn main() {
+    let return_val = emulate();
+    if return_val.is_err() {
+        error!("Stopping due to {}", return_val.unwrap_err());
     }
 }
