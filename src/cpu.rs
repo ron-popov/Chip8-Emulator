@@ -82,6 +82,7 @@ impl CPU {
 
                 // Decode and execute instruction
                 match instruction_nibbles[0] {
+                    0 => {}, //SYS Addr, ignored by modern interpreters
                     1 => { //JUMP
                         let new_addr = instruction_double & 0b0000111111111111;
                         self.program_counter = new_addr;
@@ -93,6 +94,34 @@ impl CPU {
 
                         self.program_counter = new_addr;
                     },
+                    3 => { //SE - Skip if equal
+                        let register_index = instruction_nibbles[1];
+                        let comp_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
+
+                        if self.registers[register_index as usize] == comp_value {
+                            self.program_counter += 2;
+                        }
+                    },
+                    4 => { //SNE - Skip if not equal
+                        let register_index = instruction_nibbles[1];
+                        let comp_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
+
+                        if self.registers[register_index as usize] != comp_value {
+                            self.program_counter += 2;
+                        }
+                    },
+                    5 => { //SE - Skip if registers equals
+                        if instruction_nibbles[3] != 0 {
+                            return Err(Chip8Error::InvalidInstruction);
+                        }
+
+                        let first_register_index = instruction_nibbles[1];
+                        let second_register_index = instruction_nibbles[2];
+                        
+                        if self.registers[first_register_index as usize] == self.registers[second_register_index as usize] {
+                            self.program_counter += 2;
+                        }
+                    },
                     6 => { //LD - Set register value
                         let register_index = instruction_nibbles[1];
                         let new_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
@@ -103,7 +132,65 @@ impl CPU {
                     7 => { // ADD - Add to register
                         let add_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
                         self.registers[instruction_nibbles[1] as usize] += add_value;
-                    }
+                    },
+                    8 =>{ //LD - Registers
+                        let x_register = instruction_nibbles[1] as usize;
+                        let y_register = instruction_nibbles[2] as usize;
+
+                        match instruction_nibbles[3] {
+                            0 => { //Assign
+                                self.registers[x_register] = self.registers[y_register];
+                            },
+                            1 => { //Bitwise or
+                                self.registers[x_register] = self.registers[x_register] | self.registers[y_register];
+                            },
+                            2 => { //Bitwise and
+                                self.registers[x_register] = self.registers[x_register] & self.registers[y_register];
+                            },
+                            3 => { //Bitwise xor
+                                self.registers[x_register] = self.registers[x_register] ^ self.registers[y_register];
+                            },
+                            4 => { //Add
+                                let add_result: u16 = self.registers[x_register] as u16 + self.registers[y_register] as u16;
+                                if add_result > u8::MAX as u16 {
+                                    self.registers[0x0F] = 1;
+                                } else {
+                                    self.registers[0x0F] = 0;
+                                }
+
+                                self.registers[x_register] = add_result as u8;
+                            },
+                            5 => { //Sub
+                                if self.registers[x_register] > self.registers[y_register] {
+                                    self.registers[0x0F] = 1;
+                                } else {
+                                    self.registers[0x0F] = 0;
+                                }
+
+                                self.registers[x_register] = self.registers[x_register] - self.registers[y_register];
+                            },
+                            6 => { //Shift Right
+                                self.registers[0x0F] = self.registers[x_register] & 0b00000001;
+                                self.registers[x_register] = self.registers[x_register] >> 1;
+                            },
+                            7 => { //SubN
+                                if self.registers[y_register] > self.registers[x_register] {
+                                    self.registers[0x0F] = 1;
+                                } else {
+                                    self.registers[0x0F] = 0;
+                                }
+
+                                self.registers[x_register] = self.registers[y_register] - self.registers[x_register];
+                            },
+                            0x0E => { //Shift Left
+                                self.registers[0x0F] = self.registers[x_register] & 0b10000000;
+                                self.registers[x_register] = self.registers[x_register] << 1;
+                            },
+                            _ => {
+                                return Err(Chip8Error::InvalidInstruction);
+                            }
+                        }
+                    },
                     0xA => { // LD I - Set Index register
                         
                         let new_value: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
