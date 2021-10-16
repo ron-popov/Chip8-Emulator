@@ -121,6 +121,7 @@ impl CPU {
                     },
                     5 => { //SE - Skip if registers equals
                         if instruction_nibbles[3] != 0 {
+                            error!("Invalid instruction : {:#06x}", instruction_double);
                             return Err(Chip8Error::InvalidInstruction);
                         }
 
@@ -196,12 +197,14 @@ impl CPU {
                                 self.registers[x_register] = self.registers[x_register] << 1;
                             },
                             _ => {
+                                error!("Invalid instruction : {:#06x}", instruction_double);
                                 return Err(Chip8Error::InvalidInstruction);
                             }
                         }
                     },
                     9 => { //SNE
                         if instruction_nibbles[3] != 0 {
+                            error!("Invalid instruction : {:#06x}", instruction_double);
                             return Err(Chip8Error::InvalidInstruction);
                         }
 
@@ -272,7 +275,33 @@ impl CPU {
                                 self.program_counter += 2;
                             }
                         }
-                    }
+                    },
+                    0xF => {
+                        let last_byte = ((instruction_nibbles[2]) << 4) + instruction_nibbles[3];
+                        let x_register = instruction_nibbles[1] as usize;
+
+                        match last_byte {
+                            0x07 => { // Get delay timer
+                                // TODO
+                            },
+                            0x0A => { // Wait for keypress
+                                // TODO
+                            },
+                            0x15 => { // Set delay timer
+                                // TODO
+                            },
+                            0x18 => { // Set sound timer
+                                // TODO
+                            },
+                            0x1E => { // ADD Index,Vx
+                                self.program_counter = ((self.program_counter as u32 + self.registers[x_register] as u32) % u32::pow(2,12)) as u16
+                            },
+                            _ => {
+                                error!("Invalid instruction : {:#06x}", instruction_double);
+                                return Err(Chip8Error::InvalidInstruction);   
+                            }
+                        }
+                    },
                     _ => {
                         error!("Invalid instruction : {:#06x}", instruction_double);
                         return Err(Chip8Error::InvalidInstruction);
