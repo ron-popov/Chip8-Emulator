@@ -13,6 +13,9 @@ use display::Display;
 use std::io::Read;
 use std::fs::File;
 
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
+
 #[macro_use] extern crate log;
 use simplelog::{ConfigBuilder, Level, CombinedLogger, TermLogger, WriteLogger, LevelFilter, TerminalMode, Color, ColorChoice};
 
@@ -69,20 +72,40 @@ fn main() {
     let memory: Memory = Memory::new_from_rom(rom_content);
 
     // Initialize display
-    let display = Display::new();
-    if display.is_err() {
+    let display_result = Display::new();
+    if display_result.is_err() {
         error!("Failed initializing display");
         return;
     }
 
+    let (mut display, mut event_pump) = display_result.unwrap();
+
     // Initialize cpu
-    let mut cpu = CPU::new(memory, display.unwrap());
+    let mut cpu = CPU::new(memory, &mut display);
 
-    // Main CPU Loop
-    let mut cpu_result: Result<(), Chip8Error> = Ok(());
-    while cpu_result.is_ok() {
-        cpu_result = cpu.execute_instruction();
+    // Main loop
+    'main_loop: loop {
+        let cpu_result = cpu.execute_instruction();
+        if cpu_result.is_err() {
+            error!("Leaving main loop, Got cpu error : {:?}", cpu_result.unwrap_err());
+            break 'main_loop;
+        }
+
+        match event_pump.poll_event() {
+            Some(event) => {
+                match event {
+                    Event::Quit {..} => {
+                        error!("Got quit event");
+                        break 'main_loop;
+                    },
+                    Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                        error!("Got escape keycode event");
+                        break 'main_loop;
+                    }
+                    _ => {}
+                }
+            },
+            None => {}
+        }
     }
-
-    error!("Left main cpu, Got error : {:?}", cpu_result.unwrap_err());
 }

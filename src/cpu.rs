@@ -4,17 +4,17 @@ use crate::consts;
 use crate::stack::Stack;
 use crate::display::Display;
 
-pub struct CPU {
+pub struct CPU<'a> {
     memory_space: Memory,
     program_counter: u16,
-    display: Display,
+    display: &'a mut Display,
     stack: Stack,
     registers: [u8; 16],
     index_register: u16
 }
 
-impl CPU {
-    pub fn new(memory: Memory, display: Display) -> CPU {
+impl CPU<'_> {
+    pub fn new(memory: Memory, display: &'_ mut Display) -> CPU<'_> {
         CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, display: display, stack: Stack::new(), registers: [0x00; 16], index_register: 0x00}
     }
 
