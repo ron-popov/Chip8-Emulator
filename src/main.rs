@@ -11,7 +11,7 @@ use std::io::Read;
 use std::fs::File;
 
 use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
+use sdl2::keyboard::Scancode;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
@@ -41,7 +41,7 @@ fn emulate() -> Result<(), String> {
     config_builder.set_target_level(LevelFilter::Error);
 
     let config = config_builder.build();
-    let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![TermLogger::new(LevelFilter::Trace, config.clone(), TerminalMode::Mixed, ColorChoice::Auto)];
+    let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![TermLogger::new(LevelFilter::Debug, config.clone(), TerminalMode::Mixed, ColorChoice::Auto)];
     logging_vector.push(WriteLogger::new(LevelFilter::Trace, config.clone(), File::create("Chip8.log").unwrap()));
     let logger_init_result = CombinedLogger::init(logging_vector);
 
@@ -89,7 +89,13 @@ fn emulate() -> Result<(), String> {
 
     // Main loop
     'main_loop: loop {
-        let cpu_result = cpu.execute_instruction();
+        let keys: Vec<Scancode> = event_pump
+            .keyboard_state()
+            .pressed_scancodes()
+            // .filter_map(Keycode::from_scancode)
+            .collect();
+
+        let cpu_result = cpu.execute_instruction(keys);
         if cpu_result.is_err() {
             error!("Leaving main loop, Got cpu error : {:?}", cpu_result.unwrap_err());
             break 'main_loop;
@@ -102,10 +108,6 @@ fn emulate() -> Result<(), String> {
                         error!("Got quit event");
                         break 'main_loop;
                     },
-                    Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                        error!("Got escape keycode event");
-                        break 'main_loop;
-                    }
                     _ => {}
                 }
             },

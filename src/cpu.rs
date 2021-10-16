@@ -7,6 +7,12 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
+use sdl2::keyboard::Scancode;
+
+use rand::Rng;
+use rand::rngs::ThreadRng;
+
+use std::collections::HashMap;
 
 pub struct CPU {
     memory_space: Memory,
@@ -14,13 +20,16 @@ pub struct CPU {
     canvas: Canvas<Window>,
     stack: Stack,
     registers: [u8; 16],
-    index_register: u16
+    index_register: u16,
+    rng: ThreadRng,
+    layout_to_scancode_map: HashMap::<u8, u16>
 }
-
 
 impl CPU {
     pub fn new(memory: Memory, canvas: Canvas<Window>) -> CPU {
-        CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, canvas: canvas, stack: Stack::new(), registers: [0x00; 16], index_register: 0x00}
+        let rng = rand::thread_rng();
+        CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, canvas: canvas, stack: Stack::new(), 
+            registers: [0x00; 16], index_register: 0x00, rng: rng, layout_to_scancode_map : consts::get_layout_to_scancode_map()}
     }
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
@@ -57,7 +66,7 @@ impl CPU {
         return Ok(());
     }
 
-    pub fn execute_instruction(&mut self) -> Result<(),Chip8Error> {
+    pub fn execute_instruction(&mut self, keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
         let instruction_double: u16 = ((self.memory_space.get_value(self.program_counter) as u16) << 8) + self.memory_space.get_value(self.program_counter + 1) as u16;
         debug!("Current Instruction : {:#06x}", instruction_double);
         
@@ -68,7 +77,7 @@ impl CPU {
             },
             0x00EE => { // RETURN
                 self.program_counter = self.stack.pop()?;
-            }
+            },
             _ => { // If the instruction requires parsing the opcode nibbles
                 // Parse nibbles
                 let instruction_nibbles: [u8; 4] = [
@@ -182,7 +191,7 @@ impl CPU {
 
                                 self.registers[x_register] = self.registers[y_register] - self.registers[x_register];
                             },
-                            0x0E => { //Shift Left
+                            0xE => { //Shift Left
                                 self.registers[0x0F] = self.registers[x_register] & 0b10000000;
                                 self.registers[x_register] = self.registers[x_register] << 1;
                             },
@@ -191,11 +200,35 @@ impl CPU {
                             }
                         }
                     },
+                    9 => { //SNE
+                        if instruction_nibbles[3] != 0 {
+                            return Err(Chip8Error::InvalidInstruction);
+                        }
+
+                        let x_register = instruction_nibbles[1] as usize;
+                        let y_register = instruction_nibbles[2] as usize;
+
+                        if self.registers[x_register] != self.registers[y_register] {
+                            self.program_counter += 2;
+                        }
+                    }
                     0xA => { // LD I - Set Index register
-                        
                         let new_value: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
                         self.index_register = new_value;
                     },
+                    0xB => { //Jump V0
+                        let mut target_addr: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
+                        target_addr += self.registers[0x00] as u16;
+
+                        self.program_counter = target_addr;
+                    },
+                    0xC => { //RND
+                        let x_register = instruction_nibbles[1] as usize;
+                        let and_mask = ((instruction_nibbles[2]) << 4) + instruction_nibbles[3];
+
+                        let rand_value = self.rng.gen::<u8>() & and_mask;
+                        self.registers[x_register] = rand_value;
+                    }
                     0xD => { // DRW - Draw sprite on screen
                         let sprite_length = instruction_nibbles[3];
                         let sprite_memory_addr = self.index_register;
@@ -218,6 +251,27 @@ impl CPU {
                             return Err(Chip8Error::DisplayError(error_msg));
                         }
 
+                    },
+                    0xE => { // SKP - If key pressed / not pressed
+                        let x_register = instruction_nibbles[1] as usize;
+                        let keycode = self.registers[x_register];
+                        let scancode_option = Scancode::from_i32(self.layout_to_scancode_map[&keycode] as i32);
+
+                        if scancode_option.is_none() {
+                            return Err(Chip8Error::InvalidKeycode(keycode));
+                        }
+
+                        let scancode = scancode_option.unwrap();
+
+                        if instruction_nibbles[2] == 9 && instruction_nibbles[3] == 0xE { //Skip if pressed
+                            if keys.contains(&scancode) {
+                                self.program_counter += 2;
+                            }
+                        } else if instruction_nibbles[2] == 0xA && instruction_nibbles[3] == 1 { //Skip if not pressed
+                            if !keys.contains(&scancode) {
+                                self.program_counter += 2;
+                            }
+                        }
                     }
                     _ => {
                         error!("Invalid instruction : {:#06x}", instruction_double);
