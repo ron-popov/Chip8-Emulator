@@ -67,6 +67,7 @@ impl CPU {
     }
 
     pub fn execute_instruction(&mut self, keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
+        // Parse instruction
         let instruction_double: u16 = ((self.memory_space.get_value(self.program_counter) as u16) << 8) + self.memory_space.get_value(self.program_counter + 1) as u16;
         debug!("Current Instruction : {:#06x}", instruction_double);
         
@@ -285,7 +286,6 @@ impl CPU {
                                 // TODO
                             },
                             0x0A => { // Wait for keypress
-                                // TODO
                             },
                             0x15 => { // Set delay timer
                                 // TODO
@@ -296,6 +296,24 @@ impl CPU {
                             0x1E => { // ADD Index,Vx
                                 self.program_counter = ((self.program_counter as u32 + self.registers[x_register] as u32) % u32::pow(2,12)) as u16
                             },
+                            0x29 => { // Store sprite location
+                                // TODO
+                            },
+                            0x33 => { // Store Decimal representation of register
+                                let ones_digit: u8 = (x_register % 10) as u8;
+                                let tens_digit: u8 = (x_register as u8 - ones_digit) / 10;
+                                let hunderds_digit: u8 = (x_register as u8 - tens_digit - ones_digit) / 10;
+
+                                self.memory_space.set_value(self.index_register, hunderds_digit);
+                                self.memory_space.set_value(self.index_register + 1, tens_digit);
+                                self.memory_space.set_value(self.index_register + 2, ones_digit);
+                            },
+                            0x55 => { // Store registers to memory
+                                // TODO
+                            },
+                            0x65 => { // Read register from memory
+                                // TODO
+                            }
                             _ => {
                                 error!("Invalid instruction : {:#06x}", instruction_double);
                                 return Err(Chip8Error::InvalidInstruction);   
