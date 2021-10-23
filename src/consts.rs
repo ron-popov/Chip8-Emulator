@@ -4,6 +4,7 @@ pub const MEMORY_SIZE: usize = 4096;
 pub const PROGRAM_MEMORY_ADDR: usize = 0x200;
 pub const DISPLAY_WIDTH: usize = 64;
 pub const DISPLAY_HEIGHT: usize = 32;
+pub const SCALE_FACTOR: usize = 8;
 
 pub fn get_layout_to_scancode_map() -> HashMap<u8, u16> {
     let mut map = HashMap::<u8, u16>::new();

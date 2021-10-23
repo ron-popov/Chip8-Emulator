@@ -73,13 +73,13 @@ fn emulate() -> Result<(), String> {
     // Initialize sdl
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
-    let window = video_subsystem.window("Chip8 Emulator", consts::DISPLAY_WIDTH as u32, consts::DISPLAY_HEIGHT as u32).build().unwrap();
+    let window = video_subsystem.window("Chip8 Emulator", consts::DISPLAY_WIDTH as u32 * consts::SCALE_FACTOR as u32, consts::DISPLAY_HEIGHT as u32 * consts::SCALE_FACTOR as u32).build().unwrap();
 
     let mut canvas : Canvas<Window> = window.into_canvas()
-        .present_vsync() // This means the screen cannot
-                         // render faster than your display rate (usually 60Hz or 144Hz)
+        .present_vsync()
         .build().unwrap();
 
+    canvas.set_scale(consts::SCALE_FACTOR as f32, consts::SCALE_FACTOR as f32)?;
     canvas.clear();
 
     let mut event_pump = sdl_context.event_pump()?;
