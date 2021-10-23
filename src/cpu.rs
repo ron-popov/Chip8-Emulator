@@ -70,7 +70,7 @@ impl CPU {
     pub fn execute_instruction(&mut self, keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
         // Parse instruction
         let instruction_double: u16 = ((self.memory_space.get_value(self.program_counter) as u16) << 8) + self.memory_space.get_value(self.program_counter + 1) as u16;
-        debug!("Current Instruction : {:#06x}", instruction_double);
+        debug!("{:#06x} -> {:#06x}", self.program_counter, instruction_double);
         
         // Execute simple instructions
         match instruction_double {
@@ -220,6 +220,7 @@ impl CPU {
                     0xA => { // LD I - Set Index register
                         let new_value: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
                         self.index_register = new_value;
+                        info!("Index register value is {:#06x}", self.index_register);
                     },
                     0xB => { //Jump V0
                         let mut target_addr: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
