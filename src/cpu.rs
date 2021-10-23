@@ -13,6 +13,7 @@ use rand::Rng;
 use rand::rngs::ThreadRng;
 
 use std::collections::HashMap;
+use std::num::Wrapping;
 
 pub struct CPU {
     memory_space: Memory,
@@ -142,7 +143,7 @@ impl CPU {
                     },
                     7 => { // ADD - Add to register
                         let add_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
-                        self.registers[instruction_nibbles[1] as usize] += add_value;
+                        self.registers[instruction_nibbles[1] as usize] = (Wrapping(self.registers[instruction_nibbles[1] as usize] as u8) + Wrapping(add_value as u8)).0;
                     },
                     8 =>{ //LD - Registers
                         let x_register = instruction_nibbles[1] as usize;
@@ -178,7 +179,7 @@ impl CPU {
                                     self.registers[0x0F] = 0;
                                 }
 
-                                self.registers[x_register] = self.registers[x_register] - self.registers[y_register];
+                                self.registers[x_register] = (Wrapping(self.registers[x_register]) - Wrapping(self.registers[y_register])).0;
                             },
                             6 => { //Shift Right
                                 self.registers[0x0F] = self.registers[x_register] & 0b00000001;
