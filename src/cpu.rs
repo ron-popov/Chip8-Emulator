@@ -74,7 +74,7 @@ impl CPU {
         // Execute simple instructions
         match instruction_double {
             0x00E0 => { //CLS - Clear screen
-                //TODO
+                self.canvas.clear();
             },
             0x00EE => { // RETURN
                 self.program_counter = self.stack.pop()?;
@@ -283,20 +283,31 @@ impl CPU {
 
                         match last_byte {
                             0x07 => { // Get delay timer
+                                error!("Unimplemented instruction : {:#06x}", instruction_double);
+                                return Err(Chip8Error::UnimplementedInstruction);
                                 // TODO
                             },
                             0x0A => { // Wait for keypress
+                                error!("Unimplemented instruction : {:#06x}", instruction_double);
+                                return Err(Chip8Error::UnimplementedInstruction);
+                                // TODO
                             },
                             0x15 => { // Set delay timer
+                                error!("Unimplemented instruction : {:#06x}", instruction_double);
+                                return Err(Chip8Error::UnimplementedInstruction);
                                 // TODO
                             },
                             0x18 => { // Set sound timer
+                                error!("Unimplemented instruction : {:#06x}", instruction_double);
+                                return Err(Chip8Error::UnimplementedInstruction);
                                 // TODO
                             },
                             0x1E => { // ADD Index,Vx
                                 self.program_counter = ((self.program_counter as u32 + self.registers[x_register] as u32) % u32::pow(2,12)) as u16
                             },
                             0x29 => { // Store sprite location
+                                error!("Unimplemented instruction : {:#06x}", instruction_double);
+                                return Err(Chip8Error::UnimplementedInstruction);
                                 // TODO
                             },
                             0x33 => { // Store Decimal representation of register
@@ -309,10 +320,16 @@ impl CPU {
                                 self.memory_space.set_value(self.index_register + 2, ones_digit);
                             },
                             0x55 => { // Store registers to memory
-                                // TODO
+                                for i in 0..x_register+1 {
+                                    self.index_register += 1;
+                                    self.memory_space.set_value(self.index_register, self.registers[i]);
+                                }
                             },
                             0x65 => { // Read register from memory
-                                // TODO
+                                for i in 0..x_register+1 {
+                                    self.index_register += 1;
+                                    self.registers[i] = self.memory_space.get_value(self.index_register);
+                                }
                             }
                             _ => {
                                 error!("Invalid instruction : {:#06x}", instruction_double);

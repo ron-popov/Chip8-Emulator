@@ -3,5 +3,6 @@ pub enum Chip8Error {
     InvalidInstruction,
     TriedPoppingEmptyStack,
     DisplayError(String),
-    InvalidKeycode(u8)
+    InvalidKeycode(u8),
+    UnimplementedInstruction
 }
