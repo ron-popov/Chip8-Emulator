@@ -4,5 +4,5 @@ pub enum Chip8Error {
     TriedPoppingEmptyStack,
     DisplayError(String),
     InvalidKeycode(u8),
-    UnimplementedInstruction
+    UnimplementedInstruction,
 }

@@ -23,14 +23,15 @@ pub struct CPU {
     registers: [u8; 16],
     index_register: u16,
     rng: ThreadRng,
-    layout_to_scancode_map: HashMap::<u8, u16>
+    chip_to_real_key_map: HashMap::<u8, u16>,
+    last_real_keys: Option::<(u8, Vec::<Scancode>)>
 }
 
 impl CPU {
     pub fn new(memory: Memory, canvas: Canvas<Window>) -> CPU {
         let rng = rand::thread_rng();
         CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, canvas: canvas, stack: Stack::new(), 
-            registers: [0x00; 16], index_register: 0x00, rng: rng, layout_to_scancode_map : consts::get_layout_to_scancode_map()}
+            registers: [0x00; 16], index_register: 0x00, rng: rng, chip_to_real_key_map : consts::get_chip_to_real_key_map(), last_real_keys: None}
     }
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
@@ -67,7 +68,29 @@ impl CPU {
         return Ok(());
     }
 
-    pub fn execute_instruction(&mut self, keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
+    pub fn execute_instruction(&mut self, real_keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
+        // Check if wait for keyboard
+        if self.last_real_keys.is_some() {
+            let (x_register, last_real_keys_unwrapped) = self.last_real_keys.as_ref().unwrap();
+            let real_keys_used_values: Vec<&u16> = self.chip_to_real_key_map.values().collect();
+
+            'find_key: for real_key in real_keys {
+                let real_key_int = real_key as u16;
+                // If a key is in the currently pressed keys, and not in the previous ones
+                if !last_real_keys_unwrapped.contains(&real_key) && real_keys_used_values.contains(&&real_key_int) {
+                    // Translate the value of real key to chip8 key value
+                    for chip_key in self.chip_to_real_key_map.keys() {
+                        if self.chip_to_real_key_map[chip_key] == real_key_int {
+                            self.registers[*x_register as usize] = *chip_key;
+                            self.last_real_keys = None;
+                            
+                            break 'find_key;
+                        }
+                    }
+                }
+            }
+        }
+
         // Parse instruction
         let instruction_double: u16 = ((self.memory_space.get_value(self.program_counter) as u16) << 8) + self.memory_space.get_value(self.program_counter + 1) as u16;
         debug!("{:#06x} -> {:#06x}", self.program_counter, instruction_double);
@@ -261,7 +284,7 @@ impl CPU {
                     0xE => { // SKP - If key pressed / not pressed
                         let x_register = instruction_nibbles[1] as usize;
                         let keycode = self.registers[x_register];
-                        let scancode_option = Scancode::from_i32(self.layout_to_scancode_map[&keycode] as i32);
+                        let scancode_option = Scancode::from_i32(self.chip_to_real_key_map[&keycode] as i32);
 
                         if scancode_option.is_none() {
                             return Err(Chip8Error::InvalidKeycode(keycode));
@@ -270,11 +293,11 @@ impl CPU {
                         let scancode = scancode_option.unwrap();
 
                         if instruction_nibbles[2] == 9 && instruction_nibbles[3] == 0xE { //Skip if pressed
-                            if keys.contains(&scancode) {
+                            if real_keys.contains(&scancode) {
                                 self.program_counter += 2;
                             }
                         } else if instruction_nibbles[2] == 0xA && instruction_nibbles[3] == 1 { //Skip if not pressed
-                            if !keys.contains(&scancode) {
+                            if !real_keys.contains(&scancode) {
                                 self.program_counter += 2;
                             }
                         }
@@ -290,9 +313,7 @@ impl CPU {
                                 // TODO
                             },
                             0x0A => { // Wait for keypress
-                                error!("Unimplemented instruction : {:#06x}", instruction_double);
-                                return Err(Chip8Error::UnimplementedInstruction);
-                                // TODO
+                                self.last_real_keys = Some((x_register as u8, real_keys));
                             },
                             0x15 => { // Set delay timer
                                 error!("Unimplemented instruction : {:#06x}", instruction_double);
@@ -307,10 +328,9 @@ impl CPU {
                             0x1E => { // ADD Index,Vx
                                 self.program_counter = ((self.program_counter as u32 + self.registers[x_register] as u32) % u32::pow(2,12)) as u16
                             },
-                            0x29 => { // Store sprite location
-                                error!("Unimplemented instruction : {:#06x}", instruction_double);
-                                return Err(Chip8Error::UnimplementedInstruction);
-                                // TODO
+                            0x29 => { // Get digit font addr
+                                self.index_register = self.memory_space.get_font_addr(self.registers[x_register])?;
+                                info!("Index register value is {:#06x}", self.index_register);
                             },
                             0x33 => { // Store Decimal representation of register
                                 let ones_digit: u8 = (x_register % 10) as u8;

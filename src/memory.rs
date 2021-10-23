@@ -1,12 +1,33 @@
 use crate::consts;
+use crate::errors::Chip8Error;
 
 pub struct Memory {
-    memory_space: Vec<u8>
+    memory_space: Vec<u8>,
+    font_addresses: [u16; 16]
 }
 
 impl Memory {
     pub fn new() -> Memory {
-        Memory{memory_space: vec![0x00.into(); consts::MEMORY_SIZE]}
+        Memory{memory_space: vec![0x00.into(); consts::MEMORY_SIZE], font_addresses: [0; 16]}
+    }
+
+    pub fn load_font(&mut self) {
+        let mut font_index: u16 = consts::FONT_START_ADDR as u16;
+        for (i,digit_font_content) in consts::FONT_CONTENT.iter().enumerate() {
+            self.font_addresses[i] = font_index;
+            for b in digit_font_content {
+                self.set_value(font_index, *b);
+                font_index += 1;
+            }
+        }
+    }
+
+    pub fn get_font_addr(&self, digit: u8) -> Result<u16, Chip8Error> {
+        if (digit as usize) > self.font_addresses.len() {
+            return Err(Chip8Error::InvalidKeycode(digit));
+        }
+
+        return Ok(self.font_addresses[digit as usize]);
     }
 
     pub fn new_from_rom(rom_content: Vec<u8>) -> Memory {
@@ -25,6 +46,7 @@ impl Memory {
 
         debug!("Loaded rom to memory in address {} -> {}", consts::PROGRAM_MEMORY_ADDR, counter);
 
+        mem.load_font();
         return mem;
     }
 
