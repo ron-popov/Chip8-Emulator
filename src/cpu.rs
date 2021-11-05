@@ -2,6 +2,7 @@ use crate::memory::Memory;
 use crate::errors::Chip8Error;
 use crate::consts;
 use crate::stack::Stack;
+use crate::delay_timer::DelayTimer;
 
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -24,19 +25,20 @@ pub struct CPU {
     index_register: u16,
     rng: ThreadRng,
     chip_to_real_key_map: HashMap::<u8, &'static str>,
-    last_real_keys: Option::<(u8, Vec::<Scancode>)>
+    last_real_keys: Option::<(u8, Vec::<Scancode>)>,
+    delay_timer: DelayTimer,
 }
 
 impl CPU {
     pub fn new(memory: Memory, canvas: Canvas<Window>) -> CPU {
         let rng = rand::thread_rng();
         CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, canvas: canvas, stack: Stack::new(), 
-            registers: [0x00; 16], index_register: 0x00, rng: rng, chip_to_real_key_map : consts::get_chip_to_real_key_map(), last_real_keys: None}
+            registers: [0x00; 16], index_register: 0x00, rng: rng, chip_to_real_key_map : consts::get_chip_to_real_key_map(), last_real_keys: None, delay_timer: DelayTimer::init_timer()}
     }
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
-        debug!("Displaying sprite");
-        trace!("Sprite content : {:?}", sprite_content);
+        debug!("DRAW_ACTION | Displaying sprite");
+        trace!("DRAW_ACTION | Sprite content : {:?}", sprite_content);
     
         let mut y = (y_coord as i32) % consts::DISPLAY_HEIGHT as i32;
         for sprite in sprite_content {
@@ -49,10 +51,10 @@ impl CPU {
                 if (value & 0b1) == 1 {
                     // self.canvas.set_draw_color(Color::BLACK);
                     self.canvas.set_draw_color(Color::WHITE);
-                    trace!("Drawing black pixel at ({}, {})", x, y);
+                    trace!("DRAW_ACTION | Drawing black pixel at ({}, {})", x, y);
                 } else {
                     self.canvas.set_draw_color(Color::BLACK);
-                    trace!("Drawing white pixel at ({}, {})", x, y);
+                    trace!("DRAW_ACTION | Drawing white pixel at ({}, {})", x, y);
                 }
     
                 value = value >> 1;
@@ -71,42 +73,18 @@ impl CPU {
     pub fn execute_instruction(&mut self, real_keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
         // Check if wait for keyboard
         if self.last_real_keys.is_some() {
-            // // Real Code
-            // let (x_register, last_real_keys_unwrapped) = self.last_real_keys.as_ref().unwrap();
-            // let real_keys_used_values: Vec<&u16> = self.chip_to_real_key_map.values().collect();
-
-            // 'find_key: for real_key in &real_keys {
-            //     let real_key_int = *real_key as u16;
-            //     // If a key is in the currently pressed keys, and not in the previous ones
-            //     if !last_real_keys_unwrapped.contains(&real_key) && real_keys_used_values.contains(&&real_key_int) {
-
-            //         // Translate the value of real key to chip8 key value
-            //         for chip_key in self.chip_to_real_key_map.keys() {
-            //             if self.chip_to_real_key_map[chip_key] == real_key_int {
-            //                 self.registers[*x_register as usize] = *chip_key;
-            //                 self.last_real_keys = None;
-                            
-            //                 trace!("Leaving wait for keypress mode");
-
-            //                 break 'find_key;
-            //             }
-            //         }
-            //     }
-            // }
-            // return Ok(());
-
-            // Wait for enter press - DEGUG
-            trace!("Waiting for keypress");
+            // Wait for enter press
+            trace!("KEYPAD_ACTION | Waiting for keypress");
             let mut found_key = false;
             'find_key: for key in &real_keys {
                 let key_name = key.name();
-                trace!("Pressed key name : {}", key_name);
+                trace!("KEYPAD_ACTION | Pressed key name : {}", key_name);
                 if key_name == "Return" {
                     let (x_register, _) = self.last_real_keys.as_ref().unwrap();
                     self.registers[*x_register as usize] = 1;
                     self.last_real_keys = None;
                     
-                    trace!("Leaving wait for keypress mode");
+                    trace!("KEYPAD_ACTION | Leaving wait for keypress mode");
                     found_key = true;
                     break 'find_key;
                 }
@@ -137,8 +115,6 @@ impl CPU {
                     ((instruction_double >> 4) & 0b00001111).try_into().unwrap(),
                     (instruction_double & 0b0001111).try_into().unwrap()
                 ];
-
-                // trace!("Instruction nibbles : {:?}", instruction_nibbles);
 
                 // Decode and execute instruction
                 match instruction_nibbles[0] {
@@ -187,7 +163,6 @@ impl CPU {
                         let register_index = instruction_nibbles[1];
                         let new_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
 
-                        trace!("Setting register #{} to {:#04x}", register_index, new_value);
                         self.registers[register_index as usize] = new_value;
                     },
                     7 => { // ADD - Add to register
@@ -344,14 +319,10 @@ impl CPU {
 
                         match last_byte {
                             0x07 => { // Get delay timer
-                                error!("Unimplemented instruction : {:#06x}", instruction_double);
-                                return Err(Chip8Error::UnimplementedInstruction);
-                                // TODO
+                                self.registers[x_register] = self.delay_timer.get_value();
                             },
                             0x0A => { // Wait for keypress
-                                // error!("Unimplemented instruction : {:#06x}", instruction_double);
-                                // return Err(Chip8Error::UnimplementedInstruction);
-                                trace!("Entering wait for keypress mode");
+                                trace!("KEYPAD_ACTION | Entering wait for keypress mode");
                                 if self.last_real_keys.is_some() {
                                     return Err(Chip8Error::WaitForKeypressDuringWaitMode);
                                 }
@@ -359,9 +330,7 @@ impl CPU {
                                 self.last_real_keys = Some((x_register as u8, real_keys));
                             },
                             0x15 => { // Set delay timer
-                                error!("Unimplemented instruction : {:#06x}", instruction_double);
-                                return Err(Chip8Error::UnimplementedInstruction);
-                                // TODO
+                                self.delay_timer.set_value(self.registers[x_register]);
                             },
                             0x18 => { // Set sound timer
                                 error!("Unimplemented instruction : {:#06x}", instruction_double);

@@ -3,6 +3,7 @@ mod memory;
 mod consts;
 mod errors;
 mod stack;
+mod delay_timer;
 
 use cpu::CPU;
 use memory::Memory;
@@ -32,7 +33,28 @@ fn emulate() -> Result<(), String> {
                                 .help("Path of a rom file to run")
                                 .takes_value(true)
                                 .required(true))
+                            .arg(Arg::with_name("Verbosity")
+                                .short("v")
+                                .long("verbosity")
+                                .value_name("Log Verbosity Level")
+                                .help("Log Verbosity Level")
+                                .takes_value(true)
+                                .required(false))
                             .get_matches();
+
+    let terminal_log_level_filter: LevelFilter = match command_line_args.value_of("Verbosity") {
+        Some(level) => match level.to_lowercase().as_str() {
+            "trace" => LevelFilter::Trace,
+            "debug" => LevelFilter::Debug,
+            "info" => LevelFilter::Info,
+            "warn" => LevelFilter::Warn,
+            "error" => LevelFilter::Error,
+            _ => {
+                panic!("Unkown verbosity level specified");
+            }
+        },
+        None => LevelFilter::Info,
+    };
 
     // Initialize logger
     let mut config_builder = ConfigBuilder::new();
@@ -41,7 +63,7 @@ fn emulate() -> Result<(), String> {
     config_builder.set_target_level(LevelFilter::Error);
 
     let config = config_builder.build();
-    let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![TermLogger::new(LevelFilter::Trace, config.clone(), TerminalMode::Mixed, ColorChoice::Auto)];
+    let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![TermLogger::new(terminal_log_level_filter, config.clone(), TerminalMode::Mixed, ColorChoice::Auto)];
     logging_vector.push(WriteLogger::new(LevelFilter::Trace, config.clone(), File::create("Chip8.log").unwrap()));
     let logger_init_result = CombinedLogger::init(logging_vector);
 
