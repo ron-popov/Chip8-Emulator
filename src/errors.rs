@@ -5,4 +5,5 @@ pub enum Chip8Error {
     DisplayError(String),
     InvalidKeycode(u8),
     UnimplementedInstruction,
+    WaitForKeypressDuringWaitMode
 }

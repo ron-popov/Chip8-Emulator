@@ -26,8 +26,8 @@ pub const FONT_CONTENT: [[u8; 5]; 16] = [
     [0b11110000, 0b10000000, 0b11110000, 0b10000000, 0b10000000]
 ];
 
-pub fn get_chip_to_real_key_map() -> HashMap<u8, u16> {
-    let mut map = HashMap::<u8, u16>::new();
+pub fn get_chip_to_real_key_map() -> HashMap<u8, &'static str> {
+    let mut map = HashMap::<u8, &str>::new();
 
     //// Chip 8 Keyboard
     // 1 | 2 | 3 | C
@@ -38,25 +38,25 @@ pub fn get_chip_to_real_key_map() -> HashMap<u8, u16> {
     // -------------
     // A | 0 | B | F
 
-    map.insert(1  , 0x31); // 1
-    map.insert(2  , 0x32); // 2
-    map.insert(3  , 0x33); // 3
-    map.insert(0xC, 0x34); // 4
+    map.insert(1  , "1"); // 1
+    map.insert(2  , "2"); // 2
+    map.insert(3  , "3"); // 3
+    map.insert(0xC, "4"); // 4
     
-    map.insert(4  , 0x51); // Q
-    map.insert(5  , 0x57); // W
-    map.insert(6  , 0x45); // E
-    map.insert(0xD, 0x52); // R
+    map.insert(4  , "Q"); // Q
+    map.insert(5  , "W"); // W
+    map.insert(6  , "E"); // E
+    map.insert(0xD, "R"); // R
     
-    map.insert(7  , 0x41); // A
-    map.insert(8  , 0x53); // S
-    map.insert(9  , 0x44); // D
-    map.insert(0xE, 0x46); // F
+    map.insert(7  , "A"); // A
+    map.insert(8  , "S"); // S
+    map.insert(9  , "D"); // D
+    map.insert(0xE, "F"); // F
 
-    map.insert(0xA, 0x5A); // Z
-    map.insert(0  , 0x58); // X
-    map.insert(0xB, 0x43); // C
-    map.insert(0xF, 0x56); // V
+    map.insert(0xA, "Z"); // Z
+    map.insert(0  , "X"); // X
+    map.insert(0xB, "C"); // C
+    map.insert(0xF, "Y"); // V
 
     return map;
 }

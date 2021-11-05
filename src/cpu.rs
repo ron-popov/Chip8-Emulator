@@ -23,7 +23,7 @@ pub struct CPU {
     registers: [u8; 16],
     index_register: u16,
     rng: ThreadRng,
-    chip_to_real_key_map: HashMap::<u8, u16>,
+    chip_to_real_key_map: HashMap::<u8, &'static str>,
     last_real_keys: Option::<(u8, Vec::<Scancode>)>
 }
 
@@ -71,23 +71,49 @@ impl CPU {
     pub fn execute_instruction(&mut self, real_keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
         // Check if wait for keyboard
         if self.last_real_keys.is_some() {
-            let (x_register, last_real_keys_unwrapped) = self.last_real_keys.as_ref().unwrap();
-            let real_keys_used_values: Vec<&u16> = self.chip_to_real_key_map.values().collect();
+            // // Real Code
+            // let (x_register, last_real_keys_unwrapped) = self.last_real_keys.as_ref().unwrap();
+            // let real_keys_used_values: Vec<&u16> = self.chip_to_real_key_map.values().collect();
 
-            'find_key: for real_key in real_keys {
-                let real_key_int = real_key as u16;
-                // If a key is in the currently pressed keys, and not in the previous ones
-                if !last_real_keys_unwrapped.contains(&real_key) && real_keys_used_values.contains(&&real_key_int) {
-                    // Translate the value of real key to chip8 key value
-                    for chip_key in self.chip_to_real_key_map.keys() {
-                        if self.chip_to_real_key_map[chip_key] == real_key_int {
-                            self.registers[*x_register as usize] = *chip_key;
-                            self.last_real_keys = None;
+            // 'find_key: for real_key in &real_keys {
+            //     let real_key_int = *real_key as u16;
+            //     // If a key is in the currently pressed keys, and not in the previous ones
+            //     if !last_real_keys_unwrapped.contains(&real_key) && real_keys_used_values.contains(&&real_key_int) {
+
+            //         // Translate the value of real key to chip8 key value
+            //         for chip_key in self.chip_to_real_key_map.keys() {
+            //             if self.chip_to_real_key_map[chip_key] == real_key_int {
+            //                 self.registers[*x_register as usize] = *chip_key;
+            //                 self.last_real_keys = None;
                             
-                            break 'find_key;
-                        }
-                    }
+            //                 trace!("Leaving wait for keypress mode");
+
+            //                 break 'find_key;
+            //             }
+            //         }
+            //     }
+            // }
+            // return Ok(());
+
+            // Wait for enter press - DEGUG
+            trace!("Waiting for keypress");
+            let mut found_key = false;
+            'find_key: for key in &real_keys {
+                let key_name = key.name();
+                trace!("Pressed key name : {}", key_name);
+                if key_name == "Return" {
+                    let (x_register, _) = self.last_real_keys.as_ref().unwrap();
+                    self.registers[*x_register as usize] = 1;
+                    self.last_real_keys = None;
+                    
+                    trace!("Leaving wait for keypress mode");
+                    found_key = true;
+                    break 'find_key;
                 }
+            }
+
+            if !found_key {
+                return Ok(());
             }
         }
 
@@ -284,20 +310,29 @@ impl CPU {
                     0xE => { // SKP - If key pressed / not pressed
                         let x_register = instruction_nibbles[1] as usize;
                         let keycode = self.registers[x_register];
-                        let scancode_option = Scancode::from_i32(self.chip_to_real_key_map[&keycode] as i32);
-
-                        if scancode_option.is_none() {
-                            return Err(Chip8Error::InvalidKeycode(keycode));
-                        }
-
-                        let scancode = scancode_option.unwrap();
+                        let target_key_real_name = self.chip_to_real_key_map[&keycode];
 
                         if instruction_nibbles[2] == 9 && instruction_nibbles[3] == 0xE { //Skip if pressed
-                            if real_keys.contains(&scancode) {
-                                self.program_counter += 2;
+                            'find_key_exists: for key in &real_keys {
+                                if target_key_real_name == key.name() {
+                                    self.program_counter += 2;
+                                    break 'find_key_exists;
+                                }
                             }
                         } else if instruction_nibbles[2] == 0xA && instruction_nibbles[3] == 1 { //Skip if not pressed
-                            if !real_keys.contains(&scancode) {
+                            // if !real_keys.contains(&scancode) {
+                            //     self.program_counter += 2;
+                            // }
+
+                            let mut found_key = false;
+                            'find_key_notexists: for key in &real_keys {
+                                if target_key_real_name == key.name() {
+                                    found_key = true;
+                                    break 'find_key_notexists;
+                                }
+                            }
+
+                            if !found_key {
                                 self.program_counter += 2;
                             }
                         }
@@ -306,6 +341,7 @@ impl CPU {
                         let last_byte = ((instruction_nibbles[2]) << 4) + instruction_nibbles[3];
                         let x_register = instruction_nibbles[1] as usize;
 
+
                         match last_byte {
                             0x07 => { // Get delay timer
                                 error!("Unimplemented instruction : {:#06x}", instruction_double);
@@ -313,6 +349,13 @@ impl CPU {
                                 // TODO
                             },
                             0x0A => { // Wait for keypress
+                                // error!("Unimplemented instruction : {:#06x}", instruction_double);
+                                // return Err(Chip8Error::UnimplementedInstruction);
+                                trace!("Entering wait for keypress mode");
+                                if self.last_real_keys.is_some() {
+                                    return Err(Chip8Error::WaitForKeypressDuringWaitMode);
+                                }
+
                                 self.last_real_keys = Some((x_register as u8, real_keys));
                             },
                             0x15 => { // Set delay timer
