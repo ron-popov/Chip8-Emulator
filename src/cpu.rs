@@ -4,7 +4,7 @@ use crate::consts;
 use crate::stack::Stack;
 use crate::delay_timer::DelayTimer;
 
-use sdl2::pixels::Color;
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
@@ -27,13 +27,15 @@ pub struct CPU {
     chip_to_real_key_map: HashMap::<u8, &'static str>,
     last_real_keys: Option::<(u8, Vec::<Scancode>)>,
     delay_timer: DelayTimer,
+    display_state: Vec<Vec<bool>>,
 }
 
 impl CPU {
     pub fn new(memory: Memory, canvas: Canvas<Window>) -> CPU {
         let rng = rand::thread_rng();
         CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, canvas: canvas, stack: Stack::new(), 
-            registers: [0x00; 16], index_register: 0x00, rng: rng, chip_to_real_key_map : consts::get_chip_to_real_key_map(), last_real_keys: None, delay_timer: DelayTimer::init_timer()}
+            registers: [0x00; 16], index_register: 0x00, rng: rng, chip_to_real_key_map : consts::get_chip_to_real_key_map(), 
+            last_real_keys: None, delay_timer: DelayTimer::init_timer(), display_state: vec![vec![false; consts::DISPLAY_HEIGHT]; consts::DISPLAY_WIDTH]}
     }
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
@@ -44,23 +46,22 @@ impl CPU {
         for sprite in sprite_content {
             let mut value = sprite;
             
-            
             for i in 0..8 {
                 let x = (x_coord as i32 + (7 - i)) % consts::DISPLAY_WIDTH as i32;
-    
-                if (value & 0b1) == 1 {
-                    // self.canvas.set_draw_color(Color::BLACK);
+
+                let is_pixel_on = self.display_state[x as usize][y as usize] as u8;
+                if ((value & 0b1) ^ is_pixel_on) == 1 {
                     self.canvas.set_draw_color(Color::WHITE);
                     trace!("DRAW_ACTION | Drawing black pixel at ({}, {})", x, y);
+                    self.display_state[x as usize][y as usize] = true;
                 } else {
                     self.canvas.set_draw_color(Color::BLACK);
                     trace!("DRAW_ACTION | Drawing white pixel at ({}, {})", x, y);
+                    self.display_state[x as usize][y as usize] = false;
                 }
-    
-                value = value >> 1;
-    
-                self.canvas.fill_rect(Rect::new(x, y, 1, 1))?;
                 
+                value = value >> 1;
+                self.canvas.fill_rect(Rect::new(x, y, 1, 1))?;
             }
             y += 1;
         }
@@ -243,11 +244,11 @@ impl CPU {
                         }
                     }
                     0xA => { // LD I - Set Index register
-                        let new_value: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
+                        let new_value: u16 = instruction_double % 0x1000;
                         self.index_register = new_value;
                     },
                     0xB => { //Jump V0
-                        let mut target_addr: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
+                        let mut target_addr: u16 = instruction_double % 0x1000;
                         target_addr += self.registers[0x00] as u16;
 
                         self.program_counter = target_addr;
@@ -338,7 +339,7 @@ impl CPU {
                                 // TODO
                             },
                             0x1E => { // ADD Index,Vx
-                                self.index_register = ((self.index_register as u32 + self.registers[x_register] as u32) % u32::pow(2,12)) as u16
+                                self.index_register = (Wrapping(self.index_register) + Wrapping(self.registers[x_register] as u16)).0;
                             },
                             0x29 => { // Get digit font addr
                                 self.index_register = self.memory_space.get_font_addr(self.registers[x_register])?;
