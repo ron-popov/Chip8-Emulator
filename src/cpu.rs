@@ -37,8 +37,8 @@ impl CPU {
     }
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
-        trace!("DRAW_ACTION | Displaying sprite");
-        trace!("DRAW_ACTION | Sprite content : {:?}", sprite_content);
+        debug!("DRAW_ACTION | Displaying sprite");
+        debug!("DRAW_ACTION | Sprite content : {:?}", sprite_content);
     
         let mut y = (y_coord as i32) % consts::DISPLAY_HEIGHT as i32;
         for sprite in sprite_content {
@@ -84,7 +84,7 @@ impl CPU {
                     self.registers[*x_register as usize] = 1;
                     self.last_real_keys = None;
                     
-                    trace!("KEYPAD_ACTION | Leaving wait for keypress mode");
+                    debug!("KEYPAD_ACTION | Leaving wait for keypress mode");
                     found_key = true;
 
                     break 'find_key;
@@ -322,7 +322,7 @@ impl CPU {
                                 self.registers[x_register] = self.delay_timer.get_value();
                             },
                             0x0A => { // Wait for keypress
-                                trace!("KEYPAD_ACTION | Entering wait for keypress mode");
+                                debug!("KEYPAD_ACTION | Entering wait for keypress mode");
                                 if self.last_real_keys.is_some() {
                                     return Err(Chip8Error::WaitForKeypressDuringWaitMode);
                                 }
@@ -338,7 +338,7 @@ impl CPU {
                                 // TODO
                             },
                             0x1E => { // ADD Index,Vx
-                                self.program_counter = ((self.program_counter as u32 + self.registers[x_register] as u32) % u32::pow(2,12)) as u16
+                                self.index_register = ((self.index_register as u32 + self.registers[x_register] as u32) % u32::pow(2,12)) as u16
                             },
                             0x29 => { // Get digit font addr
                                 self.index_register = self.memory_space.get_font_addr(self.registers[x_register])?;
