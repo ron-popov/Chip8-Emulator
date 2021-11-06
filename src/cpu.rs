@@ -25,7 +25,7 @@ pub struct CPU {
     index_register: u16,
     rng: ThreadRng,
     chip_to_real_key_map: HashMap::<u8, &'static str>,
-    last_real_keys: Option::<(u8, Vec::<Scancode>)>,
+    wait_for_key_register: Option::<u8>,
     delay_timer: DelayTimer,
     display_state: Vec<Vec<bool>>,
 }
@@ -35,7 +35,7 @@ impl CPU {
         let rng = rand::thread_rng();
         CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, canvas: canvas, stack: Stack::new(), 
             registers: [0x00; 16], index_register: 0x00, rng: rng, chip_to_real_key_map : consts::get_chip_to_real_key_map(), 
-            last_real_keys: None, delay_timer: DelayTimer::init_timer(), display_state: vec![vec![false; consts::DISPLAY_HEIGHT]; consts::DISPLAY_WIDTH]}
+            wait_for_key_register: None, delay_timer: DelayTimer::init_timer(), display_state: vec![vec![false; consts::DISPLAY_HEIGHT]; consts::DISPLAY_WIDTH]}
     }
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
@@ -71,23 +71,26 @@ impl CPU {
         return Ok(());
     }
 
-    pub fn execute_instruction(&mut self, real_keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
+    pub fn execute_instruction(&mut self, windows_pressed_keys: Vec::<Scancode>) -> Result<(),Chip8Error> {
         // Check if wait for keyboard
-        if self.last_real_keys.is_some() {
+        if self.wait_for_key_register.is_some() {
             // Wait for enter press
             let mut found_key = false;
-            'find_key: for key in &real_keys {
-                let key_name = key.name();
-                trace!("KEYPAD_ACTION | Pressed key name : {}", key_name);
-                if key_name == "Return" {
-                    let (x_register, _) = self.last_real_keys.as_ref().unwrap();
-                    self.registers[*x_register as usize] = 1;
-                    self.last_real_keys = None;
-                    
-                    debug!("KEYPAD_ACTION | Leaving wait for keypress mode");
-                    found_key = true;
-
-                    break 'find_key;
+            'find_key: for key in &windows_pressed_keys {
+                let windows_pressed_key_name = key.name();
+                trace!("KEYPAD_ACTION | Pressed key name : {}", windows_pressed_key_name);
+                for chip_key in self.chip_to_real_key_map.keys() {
+                    let windows_is_pressed_key = self.chip_to_real_key_map[chip_key];
+                    if windows_is_pressed_key == windows_pressed_key_name {
+                        let x_register = self.wait_for_key_register.unwrap();
+                        self.registers[x_register as usize] = *chip_key;
+                        self.wait_for_key_register = None;
+                        
+                        debug!("KEYPAD_ACTION | Leaving wait for keypress mode");
+                        found_key = true;
+        
+                        break 'find_key;
+                    }
                 }
             }
 
@@ -300,7 +303,7 @@ impl CPU {
                         let target_key_real_name = self.chip_to_real_key_map[&keycode];
 
                         if instruction_nibbles[2] == 9 && instruction_nibbles[3] == 0xE { //Skip if pressed
-                            'find_key_exists: for key in &real_keys {
+                            'find_key_exists: for key in &windows_pressed_keys {
                                 if target_key_real_name == key.name() {
                                     self.program_counter += 2;
                                     break 'find_key_exists;
@@ -312,7 +315,7 @@ impl CPU {
                             // }
 
                             let mut found_key = false;
-                            'find_key_notexists: for key in &real_keys {
+                            'find_key_notexists: for key in &windows_pressed_keys {
                                 if target_key_real_name == key.name() {
                                     found_key = true;
                                     break 'find_key_notexists;
@@ -335,11 +338,11 @@ impl CPU {
                             },
                             0x0A => { // Wait for keypress
                                 debug!("KEYPAD_ACTION | Entering wait for keypress mode");
-                                if self.last_real_keys.is_some() {
+                                if self.wait_for_key_register.is_some() {
                                     return Err(Chip8Error::WaitForKeypressDuringWaitMode);
                                 }
 
-                                self.last_real_keys = Some((x_register as u8, real_keys));
+                                self.wait_for_key_register = Some(x_register as u8);
                             },
                             0x15 => { // Set delay timer
                                 self.delay_timer.set_value(self.registers[x_register]);

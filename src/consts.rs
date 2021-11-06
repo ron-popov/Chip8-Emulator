@@ -57,7 +57,7 @@ pub fn get_chip_to_real_key_map() -> HashMap<u8, &'static str> {
     map.insert(0xA, "Z"); // Z
     map.insert(0  , "X"); // X
     map.insert(0xB, "C"); // C
-    map.insert(0xF, "Y"); // V
+    map.insert(0xF, "V"); // V
 
     return map;
 }
