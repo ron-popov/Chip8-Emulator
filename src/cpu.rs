@@ -4,7 +4,7 @@ use crate::consts;
 use crate::stack::Stack;
 use crate::delay_timer::DelayTimer;
 
-use sdl2::pixels::{Color, PixelFormatEnum};
+use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
