@@ -5,7 +5,7 @@ pub const PROGRAM_MEMORY_ADDR: usize = 0x200;
 pub const DISPLAY_WIDTH: usize = 64;
 pub const DISPLAY_HEIGHT: usize = 32;
 pub const SCALE_FACTOR: usize = 8;
-pub const DELAY_TIMER_TICK_MILLIS: f32 = 1000 as f32 / 0xff as f32;
+pub const TIMER_TICK_MILLIS: f32 = 1000 as f32 / 60 as f32;
 
 pub const FONT_START_ADDR: usize = 0x00;
 pub const FONT_CONTENT: [[u8; 5]; 16] = [

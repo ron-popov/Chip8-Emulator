@@ -4,6 +4,7 @@ mod consts;
 mod errors;
 mod stack;
 mod delay_timer;
+mod sound_timer;
 
 use cpu::CPU;
 use memory::Memory;

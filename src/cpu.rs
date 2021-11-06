@@ -3,6 +3,7 @@ use crate::errors::Chip8Error;
 use crate::consts;
 use crate::stack::Stack;
 use crate::delay_timer::DelayTimer;
+use crate::sound_timer::SoundTimer;
 
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -27,6 +28,7 @@ pub struct CPU {
     chip_to_real_key_map: HashMap::<u8, &'static str>,
     wait_for_key_register: Option::<u8>,
     delay_timer: DelayTimer,
+    sound_timer: SoundTimer,
     display_state: Vec<Vec<bool>>,
 }
 
@@ -35,7 +37,8 @@ impl CPU {
         let rng = rand::thread_rng();
         CPU{memory_space: memory, program_counter: consts::PROGRAM_MEMORY_ADDR as u16, canvas: canvas, stack: Stack::new(), 
             registers: [0x00; 16], index_register: 0x00, rng: rng, chip_to_real_key_map : consts::get_chip_to_real_key_map(), 
-            wait_for_key_register: None, delay_timer: DelayTimer::init_timer(), display_state: vec![vec![false; consts::DISPLAY_HEIGHT]; consts::DISPLAY_WIDTH]}
+            wait_for_key_register: None, delay_timer: DelayTimer::init_timer(), sound_timer: SoundTimer::init_timer(),
+            display_state: vec![vec![false; consts::DISPLAY_HEIGHT]; consts::DISPLAY_WIDTH]}
     }
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
@@ -348,9 +351,7 @@ impl CPU {
                                 self.delay_timer.set_value(self.registers[x_register]);
                             },
                             0x18 => { // Set sound timer
-                                error!("Unimplemented instruction : {:#06x}", instruction_double);
-                                return Err(Chip8Error::UnimplementedInstruction);
-                                // TODO
+                                self.sound_timer.set_value(self.registers[x_register]);
                             },
                             0x1E => { // ADD Index,Vx
                                 self.index_register = (Wrapping(self.index_register) + Wrapping(self.registers[x_register] as u16)).0;

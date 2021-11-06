@@ -19,7 +19,7 @@ impl DelayTimer {
 
     pub fn get_value(&mut self) -> u8 {
         let elapsed_millis = self.last_set_time.elapsed().as_millis();
-        let ticks_ticked = (elapsed_millis as f32 / consts::DELAY_TIMER_TICK_MILLIS).floor() as u32;
+        let ticks_ticked = (elapsed_millis as f32 / consts::TIMER_TICK_MILLIS).floor() as u32;
 
         if ticks_ticked >= self.timer_value as u32 {
             debug!("Delay timer value is 0");
