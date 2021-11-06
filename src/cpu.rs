@@ -84,7 +84,7 @@ impl CPU {
                 trace!("KEYPAD_ACTION | Pressed key name : {}", key_name);
                 if key_name == "Return" {
                     let (x_register, _) = self.last_real_keys.as_ref().unwrap();
-                    self.registers[*x_register as usize] = 0;
+                    self.registers[*x_register as usize] = 2;
                     self.last_real_keys = None;
                     
                     debug!("KEYPAD_ACTION | Leaving wait for keypress mode");
@@ -133,14 +133,18 @@ impl CPU {
                         self.stack.push(self.program_counter);
 
                         self.program_counter = new_addr;
-                        self.program_counter -= 2;
+                        return Ok(());
                     },
                     3 => { //SE - Skip if equal
                         let register_index = instruction_nibbles[1];
                         let comp_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
 
                         if self.registers[register_index as usize] == comp_value {
+                            debug!("Register {:X} has value {}, skipping next instruction", register_index, comp_value);
                             self.program_counter += 2;
+                        } else {
+                            debug!("Register {:X} has value {} instead of {}, not skipping next instruction", 
+                                register_index, self.registers[register_index as usize], comp_value);
                         }
                     },
                     4 => { //SNE - Skip if not equal

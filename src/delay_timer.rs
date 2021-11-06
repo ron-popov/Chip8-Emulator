@@ -14,6 +14,7 @@ impl DelayTimer {
     pub fn set_value(&mut self, value: u8) {
         self.timer_value = value;
         self.last_set_time = Instant::now();
+        debug!("Delay timer value set to {}", value);
     }
 
     pub fn get_value(&mut self) -> u8 {
@@ -21,11 +22,11 @@ impl DelayTimer {
         let ticks_ticked = (elapsed_millis as f32 / consts::DELAY_TIMER_TICK_MILLIS).floor() as u32;
 
         if ticks_ticked >= self.timer_value as u32 {
-            self.set_value(0);
+            debug!("Delay timer value is 0");
+            return 0;
         } else {
-            self.set_value(self.timer_value - ticks_ticked as u8)
+            debug!("Delay timer value is {}", self.timer_value);
+            return self.timer_value - ticks_ticked as u8;
         }
-
-        return self.timer_value;
     }
 }
