@@ -35,7 +35,7 @@ impl Memory {
             panic!("Rom content is too much to load to memory");
         }
 
-        debug!("Loading a rom of length {}", rom_content.len());
+        debug!("ROM_LOAD | Loading a rom of length {}", rom_content.len());
 
         let mut mem: Memory = Memory::new();
         let mut counter: u16 = consts::PROGRAM_MEMORY_ADDR as u16;
@@ -44,7 +44,7 @@ impl Memory {
             counter += 1;
         }
 
-        debug!("Loaded rom to memory in address {} -> {}", consts::PROGRAM_MEMORY_ADDR, counter);
+        debug!("ROM_LOAD | Loaded rom to memory in address {} -> {}", consts::PROGRAM_MEMORY_ADDR, counter);
 
         mem.load_font();
         return mem;

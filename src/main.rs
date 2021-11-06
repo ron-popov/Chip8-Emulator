@@ -40,16 +40,6 @@ fn emulate() -> Result<(), String> {
                                 .help("Log Verbosity Level")
                                 .takes_value(true)
                                 .required(false))
-                            .arg(Arg::with_name("disable-draw-log")
-                                .long("disable-draw-log")
-                                .help("Disable draw to screen trace logs")
-                                .takes_value(false)
-                                .required(false))
-                            .arg(Arg::with_name("disable-keypad-log")
-                                .long("disable-keypad-log")
-                                .help("Disable keypad trace logs")
-                                .takes_value(false)
-                                .required(false))
                             .get_matches();
 
     let terminal_log_level_filter: LevelFilter = match command_line_args.value_of("Verbosity") {
@@ -72,14 +62,6 @@ fn emulate() -> Result<(), String> {
     config_builder.set_location_level(LevelFilter::Off);
     config_builder.set_target_level(LevelFilter::Error);
 
-    if command_line_args.is_present("disable-draw-log") {
-
-    }
-
-    if command_line_args.is_present("disable-keypad-log") {
-        
-    }
-
     let config = config_builder.build();
     let term_logger = TermLogger::new(terminal_log_level_filter, config.clone(), TerminalMode::Mixed, ColorChoice::Auto);
     let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![term_logger];
@@ -96,7 +78,7 @@ fn emulate() -> Result<(), String> {
 
     // Get rom file path from command line args
     let rom_file_path: String = command_line_args.value_of("Rom File").unwrap_or_else(|| {
-        debug!("Command line args are {:?}", command_line_args);
+        error!("Command line args are {:?}", command_line_args);
         panic!("Failed unwrapping rom file path");
     }).to_string();
 

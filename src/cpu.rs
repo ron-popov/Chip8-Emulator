@@ -37,7 +37,7 @@ impl CPU {
     }
 
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
-        debug!("DRAW_ACTION | Displaying sprite");
+        trace!("DRAW_ACTION | Displaying sprite");
         trace!("DRAW_ACTION | Sprite content : {:?}", sprite_content);
     
         let mut y = (y_coord as i32) % consts::DISPLAY_HEIGHT as i32;
@@ -86,6 +86,7 @@ impl CPU {
                     
                     trace!("KEYPAD_ACTION | Leaving wait for keypress mode");
                     found_key = true;
+
                     break 'find_key;
                 }
             }
@@ -97,7 +98,7 @@ impl CPU {
 
         // Parse instruction
         let instruction_double: u16 = ((self.memory_space.get_value(self.program_counter) as u16) << 8) + self.memory_space.get_value(self.program_counter + 1) as u16;
-        debug!("{:#06x} -> {:#06x}", self.program_counter, instruction_double);
+        debug!("CURRENT_OPCODE | {:#06x} -> {:#06x}", self.program_counter, instruction_double);
         
         // Execute simple instructions
         match instruction_double {
@@ -244,7 +245,6 @@ impl CPU {
                     0xA => { // LD I - Set Index register
                         let new_value: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
                         self.index_register = new_value;
-                        info!("Index register value is {:#06x}", self.index_register);
                     },
                     0xB => { //Jump V0
                         let mut target_addr: u16 = ((instruction_nibbles[1] as u16) << 8) + ((instruction_nibbles[2] as u16) << 4) + instruction_nibbles[3] as u16;
@@ -342,7 +342,6 @@ impl CPU {
                             },
                             0x29 => { // Get digit font addr
                                 self.index_register = self.memory_space.get_font_addr(self.registers[x_register])?;
-                                info!("Index register value is {:#06x}", self.index_register);
                             },
                             0x33 => { // Store Decimal representation of register
                                 let ones_digit: u8 = (x_register % 10) as u8;
