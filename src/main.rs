@@ -65,7 +65,7 @@ fn emulate() -> Result<(), String> {
     let config = config_builder.build();
     let term_logger = TermLogger::new(terminal_log_level_filter, config.clone(), TerminalMode::Mixed, ColorChoice::Auto);
     let mut logging_vector: Vec<Box<dyn simplelog::SharedLogger>> = vec![term_logger];
-    logging_vector.push(WriteLogger::new(LevelFilter::Trace, config.clone(), File::create("Chip8.log").unwrap()));
+    logging_vector.push(WriteLogger::new(LevelFilter::Debug, config.clone(), File::create("Chip8.log").unwrap()));
     let logger_init_result = CombinedLogger::init(logging_vector);
 
     if logger_init_result.is_err() {

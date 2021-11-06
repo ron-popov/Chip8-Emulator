@@ -41,6 +41,7 @@ impl CPU {
     pub fn draw_sprite(&mut self, sprite_content: Vec<u8>, x_coord: u8, y_coord: u8) -> Result<(), String> {
         debug!("DRAW_ACTION | Displaying sprite");
         debug!("DRAW_ACTION | Sprite content : {:?}", sprite_content);
+        debug!("DRAW_ACTION | Sprite coords : ({},{})", x_coord, y_coord);
     
         let mut y = (y_coord as i32) % consts::DISPLAY_HEIGHT as i32;
         for sprite in sprite_content {
@@ -64,6 +65,7 @@ impl CPU {
                 self.canvas.fill_rect(Rect::new(x, y, 1, 1))?;
             }
             y += 1;
+            y %= consts::DISPLAY_HEIGHT as i32;
         }
     
         self.canvas.present();
@@ -82,7 +84,7 @@ impl CPU {
                 trace!("KEYPAD_ACTION | Pressed key name : {}", key_name);
                 if key_name == "Return" {
                     let (x_register, _) = self.last_real_keys.as_ref().unwrap();
-                    self.registers[*x_register as usize] = 1;
+                    self.registers[*x_register as usize] = 0;
                     self.last_real_keys = None;
                     
                     debug!("KEYPAD_ACTION | Leaving wait for keypress mode");
@@ -131,6 +133,7 @@ impl CPU {
                         self.stack.push(self.program_counter);
 
                         self.program_counter = new_addr;
+                        self.program_counter -= 2;
                     },
                     3 => { //SE - Skip if equal
                         let register_index = instruction_nibbles[1];
@@ -273,8 +276,6 @@ impl CPU {
                         let x_coord = self.registers[instruction_nibbles[1] as usize];
                         let y_coord = self.registers[instruction_nibbles[2] as usize];
 
-                        // self.draw_screen_handler(sprite_content, x_coord, y_coord);
-                        // (self.draw_screen_handler)(sprite_content, x_coord, y_coord);
                         let draw_return = self.draw_sprite(sprite_content, x_coord, y_coord);
                         if draw_return.is_err() {
                             let error_msg = draw_return.unwrap_err();
