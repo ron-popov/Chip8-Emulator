@@ -53,11 +53,9 @@ impl CPU {
                 let is_pixel_on = self.display_state[x as usize][y as usize] as u8;
                 if ((value & 0b1) ^ is_pixel_on) == 1 {
                     self.canvas.set_draw_color(Color::WHITE);
-                    trace!("DRAW_ACTION | Drawing black pixel at ({}, {})", x, y);
                     self.display_state[x as usize][y as usize] = true;
                 } else {
                     self.canvas.set_draw_color(Color::BLACK);
-                    trace!("DRAW_ACTION | Drawing white pixel at ({}, {})", x, y);
                     self.display_state[x as usize][y as usize] = false;
                 }
                 
@@ -77,14 +75,13 @@ impl CPU {
         // Check if wait for keyboard
         if self.last_real_keys.is_some() {
             // Wait for enter press
-            trace!("KEYPAD_ACTION | Waiting for keypress");
             let mut found_key = false;
             'find_key: for key in &real_keys {
                 let key_name = key.name();
                 trace!("KEYPAD_ACTION | Pressed key name : {}", key_name);
                 if key_name == "Return" {
                     let (x_register, _) = self.last_real_keys.as_ref().unwrap();
-                    self.registers[*x_register as usize] = 2;
+                    self.registers[*x_register as usize] = 1;
                     self.last_real_keys = None;
                     
                     debug!("KEYPAD_ACTION | Leaving wait for keypress mode");
@@ -101,7 +98,7 @@ impl CPU {
 
         // Parse instruction
         let instruction_double: u16 = ((self.memory_space.get_value(self.program_counter) as u16) << 8) + self.memory_space.get_value(self.program_counter + 1) as u16;
-        debug!("CURRENT_OPCODE | {:#06x} -> {:#06x}", self.program_counter, instruction_double);
+        trace!("CURRENT_OPCODE | {:#06x} -> {:#06x}", self.program_counter, instruction_double);
         
         // Execute simple instructions
         match instruction_double {
@@ -173,6 +170,7 @@ impl CPU {
                         let new_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
 
                         self.registers[register_index as usize] = new_value;
+                        trace!("Loading value {} to register {:#x}", new_value, register_index);
                     },
                     7 => { // ADD - Add to register
                         let add_value = (instruction_nibbles[2] << 4) + instruction_nibbles[3];
@@ -215,8 +213,12 @@ impl CPU {
                                 self.registers[x_register] = (Wrapping(self.registers[x_register]) - Wrapping(self.registers[y_register])).0;
                             },
                             6 => { //Shift Right
+                                let before_value = self.registers[x_register];
+
                                 self.registers[0x0F] = self.registers[x_register] & 0b00000001;
                                 self.registers[x_register] = self.registers[x_register] >> 1;
+
+                                trace!("Register {} shifted right from {} to {}", x_register, before_value, self.registers[x_register]);
                             },
                             7 => { //SubN
                                 if self.registers[y_register] > self.registers[x_register] {
@@ -228,8 +230,11 @@ impl CPU {
                                 self.registers[x_register] = self.registers[y_register] - self.registers[x_register];
                             },
                             0xE => { //Shift Left
+                                let before_value = self.registers[x_register];
                                 self.registers[0x0F] = self.registers[x_register] & 0b10000000;
                                 self.registers[x_register] = self.registers[x_register] << 1;
+
+                                trace!("Register {} shifted left from {} to {}", x_register, before_value, self.registers[x_register]);
                             },
                             _ => {
                                 error!("Invalid instruction : {:#06x}", instruction_double);
@@ -270,6 +275,7 @@ impl CPU {
                     0xD => { // DRW - Draw sprite on screen
                         let sprite_length = instruction_nibbles[3];
                         let sprite_memory_addr = self.index_register;
+                        trace!("Reading sprite content from address {:#06x}", sprite_memory_addr);
 
                         let mut sprite_content = Vec::<u8>::new();
 
@@ -345,29 +351,34 @@ impl CPU {
                             },
                             0x1E => { // ADD Index,Vx
                                 self.index_register = (Wrapping(self.index_register) + Wrapping(self.registers[x_register] as u16)).0;
+                                trace!("Index register has value : {:#06x}", self.index_register);
                             },
                             0x29 => { // Get digit font addr
                                 self.index_register = self.memory_space.get_font_addr(self.registers[x_register])?;
                             },
                             0x33 => { // Store Decimal representation of register
-                                let ones_digit: u8 = (x_register % 10) as u8;
-                                let tens_digit: u8 = (x_register as u8 - ones_digit) / 10;
-                                let hunderds_digit: u8 = (x_register as u8 - tens_digit - ones_digit) / 10;
+                                let x_value = self.registers[x_register];
+                                trace!("Storing decimal representation value of {}", x_value);
 
-                                self.memory_space.set_value(self.index_register, hunderds_digit);
-                                self.memory_space.set_value(self.index_register + 1, tens_digit);
-                                self.memory_space.set_value(self.index_register + 2, ones_digit);
+                                let ones_digit: u8 = (x_value % 10) as u8;
+                                let tens_digit: u8 = (x_value % 100) / 10 as u8;
+                                let hunderds_digit: u8 = (x_value) / 100 as u8;
+
+                                self.memory_space.set_value(self.index_register + 1, hunderds_digit);
+                                self.memory_space.set_value(self.index_register + 2, tens_digit);
+                                self.memory_space.set_value(self.index_register + 3, ones_digit);
                             },
                             0x55 => { // Store registers to memory
                                 for i in 0..x_register+1 {
-                                    self.index_register += 1;
                                     self.memory_space.set_value(self.index_register, self.registers[i]);
+                                    self.index_register += 1;
                                 }
                             },
                             0x65 => { // Read register from memory
                                 for i in 0..x_register+1 {
-                                    self.index_register += 1;
                                     self.registers[i] = self.memory_space.get_value(self.index_register);
+                                    trace!("Register {}(#{:#6x}) = {}", i, self.index_register, self.registers[i]);
+                                    self.index_register += 1;
                                 }
                             }
                             _ => {

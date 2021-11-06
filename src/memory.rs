@@ -55,6 +55,7 @@ impl Memory {
     }
 
     pub fn set_value(&mut self, index: u16, value: u8) {
+        trace!("Changing memory addr {:#6x} from {} to {}", index, self.get_value(index), value);
         self.memory_space[index as usize] = value
     }
 }
