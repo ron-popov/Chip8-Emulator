@@ -313,10 +313,6 @@ impl CPU {
                                 }
                             }
                         } else if instruction_nibbles[2] == 0xA && instruction_nibbles[3] == 1 { //Skip if not pressed
-                            // if !real_keys.contains(&scancode) {
-                            //     self.program_counter += 2;
-                            // }
-
                             let mut found_key = false;
                             'find_key_notexists: for key in &windows_pressed_keys {
                                 if target_key_real_name == key.name() {
@@ -400,8 +396,6 @@ impl CPU {
         }
 
         self.program_counter += 2;
-
-        // return Err(Chip8Error::InvalidInstruction);
         return Ok(())
     }
 }
