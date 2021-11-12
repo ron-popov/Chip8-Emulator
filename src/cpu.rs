@@ -370,15 +370,15 @@ impl CPU {
                             },
                             0x55 => { // Store registers to memory
                                 for i in 0..x_register+1 {
-                                    self.memory_space.set_value(self.index_register, self.registers[i]);
                                     self.index_register += 1;
+                                    self.memory_space.set_value(self.index_register, self.registers[i]);
                                 }
                             },
                             0x65 => { // Read register from memory
                                 for i in 0..x_register+1 {
+                                    self.index_register += 1;
                                     self.registers[i] = self.memory_space.get_value(self.index_register);
                                     trace!("Register {}(#{:#6x}) = {}", i, self.index_register, self.registers[i]);
-                                    self.index_register += 1;
                                 }
                             }
                             _ => {
