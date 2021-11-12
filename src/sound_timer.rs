@@ -29,22 +29,4 @@ impl SoundTimer {
             info!("No error while trying to play sound");
         }
     }
-
-    // // Probably not needed
-    // pub fn get_value(&self) -> u8 {
-    //     let elapsed_millis = self.last_set_time.elapsed().as_millis();
-    //     let ticks_ticked = (elapsed_millis as f32 / consts::TIMER_TICK_MILLIS).floor() as u32;
-
-    //     if ticks_ticked >= self.timer_value as u32 {
-    //         debug!("Sound timer value is 0");
-    //         return 0;
-    //     } else {
-    //         debug!("Sound timer value is {}", self.timer_value);
-    //         return self.timer_value - ticks_ticked as u8;
-    //     }
-    // }
-
-    // pub fn is_active(&self) -> bool {
-    //     return self.get_value() != 0;
-    // }
 }
