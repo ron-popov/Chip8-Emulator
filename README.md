@@ -25,13 +25,21 @@ V - Cxkk - RND Vx, byte
 V - Dxyn - DRW Vx, Vy, nibble
 V - Ex9E - SKP Vx
 V - ExA1 - SKNP Vx
-X - Fx07 - LD Vx, DT
-X - Fx0A - LD Vx, K
-X - Fx15 - LD DT, Vx
-X - Fx18 - LD ST, Vx
-X - Fx1E - ADD I, Vx
-X - Fx29 - LD F, Vx
-X - Fx33 - LD B, Vx
-X - Fx55 - LD [I], Vx
-X - Fx65 - LD Vx, [I]
+V - Fx07 - LD Vx, DT
+V - Fx0A - LD Vx, K
+V - Fx15 - LD DT, Vx
+V - Fx18 - LD ST, Vx
+V - Fx1E - ADD I, Vx
+V - Fx29 - LD F, Vx
+V - Fx33 - LD B, Vx
+V - Fx55 - LD [I], Vx
+V - Fx65 - LD Vx, [I]
 ```
+
+## Known Bugs
+### Sound
+Sound is still WIP
+
+### CPU
+Cpu should be working as documented in the instruction set, Tested using a test rom (included in `roms` directory).
+Still, it has some bugs and not all games work as expected.
